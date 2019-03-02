@@ -19,6 +19,17 @@
 }
 unit SynWebReq;
 
+{$IFDEF CONDITIONALEXPRESSIONS}
+  // RTLVersion >= Delphi 2009
+  {$IF (RTLVersion >= 20.0)}
+    {$DEFINE HAS_CLASSVARS}
+  {$IFEND}
+  // RTLVersion >= Delphi 2010
+  {$IF (RTLVersion >= 21.0)}
+    {$DEFINE HAS_CLASSDESTRUCTOR}
+  {$IFEND}
+{$ENDIF}
+
 interface
 
 uses
