@@ -47,8 +47,7 @@ uses
   Classes,
   HTTPApp,
   SynCommons,
-  SynCrtSock,
-  SysUtils;
+  SynCrtSock;
 
 const
   // Request header indices
@@ -299,7 +298,8 @@ function ServerError(AStatusCode: Cardinal; const AErrorMessage: string; AContex
 implementation
 
 uses
-  BrkrConst;
+  BrkrConst,
+  SysUtils;
 
 resourcestring
   // String is external to be protected from code formatting and not messed up
