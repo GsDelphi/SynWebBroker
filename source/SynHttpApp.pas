@@ -918,8 +918,5 @@ begin
     FStringVariables[Index] := Value;
 end;
 
-initialization
-  //RegisterContentParser(TContentParser);
-
 end.
 
