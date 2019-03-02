@@ -24,12 +24,15 @@ unit SynHttpApp;
   {$IF (RTLVersion >= 20.0) or (RTLVersion < 31.0)}
     {$DEFINE WB_ANSI}
   {$IFEND}
+  // RTLVersion >= Delphi XE
   {$IF (RTLVersion >= 22.0)}
     {$DEFINE RTL220_UP}
   {$IFEND}
+  // RTLVersion >= Delphi 10.1 Berlin
   {$IF (RTLVersion >= 31.0)}
     {$DEFINE RTL310_UP}
   {$IFEND}
+  // RTLVersion >= Delphi 6
   {$IF (RTLVersion >= 14.0)}
     {$DEFINE RTL140_UP_OR_CLR}
   {$IFEND}
