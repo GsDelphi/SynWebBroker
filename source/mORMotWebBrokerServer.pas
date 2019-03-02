@@ -22,18 +22,18 @@ unit mORMotWebBrokerServer;
 interface
 
 uses
-  HTTPApp,
   mORMotHttpServer,
+  SynCommons,
   SynCrtSock;
 
 type
   TSQLWebBrokerServer = class(TSQLHttpServer)
   private
     FActive: Boolean;
-    procedure EnumWebDispatchers(AWebDispatcher: TCustomWebDispatcher);
   protected
     function Request(Ctxt: THttpServerRequest): Cardinal; override;
-    procedure CheckWebModuleURIs; virtual;
+    procedure AuthorizeUri(AURI: RawUTF8); virtual;
+    procedure AuthorizeWebModules; virtual;
   public
     procedure AfterConstruction; override;
     property Active: Boolean read FActive write FActive;
@@ -42,15 +42,11 @@ type
 implementation
 
 uses
-  AutoDisp,
-  Classes,
+  SynWebBrokerServer,
   mORMot,
-  SynCommons,
   SynHttpApp,
   SynWebReq,
-  SysUtils,
-  TypInfo,
-  WebReq;
+  SysUtils;
 
 { TSQLWebBrokerServer }
 
@@ -58,101 +54,33 @@ procedure TSQLWebBrokerServer.AfterConstruction;
 begin
   inherited;
 
-  CheckWebModuleURIs;
+  AuthorizeWebModules;
   FActive := True;
 end;
 
-procedure TSQLWebBrokerServer.CheckWebModuleURIs;
+procedure TSQLWebBrokerServer.AuthorizeUri(AURI: RawUTF8);
+var
+  I:      Integer;
+  ErrMsg: RawUTF8;
 begin
-  TSynWebRequestHandler(SynWebRequestHandler).EnumWebDispatchers(EnumWebDispatchers);
-end;
-
-procedure TSQLWebBrokerServer.EnumWebDispatchers(AWebDispatcher: TCustomWebDispatcher);
-
-  procedure VerifyURI(const AURI: string);
-  var
-    UTF8URI: RawUTF8;
-    I:       Integer;
-    ErrMsg:  RawUTF8;
-  begin
-    UTF8URI := StringToUTF8(AURI);
-
-    for I := 0 to High(fDBServers) do
-      with fDBServers[I].Server.Model do
-      begin
-        if (URIMatch(UTF8URI) <> rmNoMatch) then
-          FormatUTF8('Duplicated Root URI: % and %',
-            [Root, UTF8URI], ErrMsg);
-      end;
-
-    if ErrMsg <> '' then
-      raise EHttpServerException.CreateUTF8('%.EnumWebDispatchers/VerifyURI( % ): %', [Self, UTF8URI, ErrMsg]);
-
-    if fHttpServerKind in [useHttpApi, useHttpApiRegisteringURI] then
-      HttpApiAddUri(UTF8URI, fDomainName, fDBServers[0].Security,
-        fHttpServerKind = useHttpApiRegisteringURI, True);
-  end;
-
-  procedure ProcessWebDispatchProperties(AComponent: TComponent);
-
-    function ExpandPathInfo(const APathInfo: string): string;
+  for I := 0 to High(fDBServers) do
+    with fDBServers[I].Server.Model do
     begin
-      Result := APathInfo;
-
-      if (Result[Length(Result)] = '*') then
-        Result[Length(Result)] := '/';
+      if (URIMatch(AURI) <> rmNoMatch) then
+        FormatUTF8('Duplicated Root URI: % and %', [Root, AURI], ErrMsg);
     end;
 
-  var
-    I, Count: Integer;
-    PropInfo: PPropInfo;
-    TempList: PPropList;
-    LObject:  TObject;
-  begin
-    Count := GetPropList(AComponent, TempList);
+  if (ErrMsg <> '') then
+    raise EHttpServerException.CreateUTF8('%.EnumWebDispatchers/VerifyURI( % ): %', [Self, AURI, ErrMsg]);
 
-    if (Count > 0) then
-      try
-        for I := 0 to Count - 1 do
-        begin
-          PropInfo := TempList^[I];
+  if fHttpServerKind in [useHttpApi, useHttpApiRegisteringURI] then
+    HttpApiAddUri(AURI, fDomainName, fDBServers[0].Security,
+      fHttpServerKind = useHttpApiRegisteringURI, True);
+end;
 
-          if (PropInfo^.PropType^.Kind = tkClass) then
-          begin
-            LObject := GetObjectProp(AComponent, PropInfo, TWebDispatch);
-
-            if (LObject <> nil) then
-            begin
-              with TWebDispatch(LObject) do
-              begin
-                VerifyURI(ExpandPathInfo(PathInfo));
-              end;
-            end;
-          end;
-        end;
-      finally
-        FreeMem(TempList);
-      end;
-  end;
-
-var
-  I, J:      Integer;
-  Component: TComponent;
-  //DispatchIntf: IWebDispatch;
+procedure TSQLWebBrokerServer.AuthorizeWebModules;
 begin
-  for I := 0 to AWebDispatcher.Actions.Count - 1 do
-  begin
-    VerifyURI(AWebDispatcher.Action[I].PathInfo);
-
-    if (AWebDispatcher.Owner <> nil) then
-      Component := AWebDispatcher.Owner
-    else
-      Component := AWebDispatcher;
-
-    with Component do
-      for J := 0 to ComponentCount - 1 do
-        ProcessWebDispatchProperties(Components[J]);
-  end;
+  TSynWebRequestHandler(SynWebRequestHandler).AuthorizeURIs(AuthorizeUri);
 end;
 
 function TSQLWebBrokerServer.Request(Ctxt: THttpServerRequest): Cardinal;
