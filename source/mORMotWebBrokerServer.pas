@@ -42,7 +42,6 @@ type
 implementation
 
 uses
-  SynWebBrokerServer,
   mORMot,
   SynHttpApp,
   SynWebReq,
