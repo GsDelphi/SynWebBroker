@@ -8,4 +8,4 @@ In preparation:
 * WebApp (TWebApplication descendant)
 * Standalone version with direct usage of the API server
 
-Currently tested with Delphi XE3, but should work from Delphi 5/6? up to Delphi 10.3 Rio
+Currently tested with Delphi XE3, but should work from Delphi 6 up to Delphi 10.3 Rio
