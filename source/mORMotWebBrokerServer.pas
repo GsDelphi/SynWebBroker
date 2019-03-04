@@ -45,7 +45,8 @@ uses
   mORMot,
   SynHttpApp,
   SynWebReq,
-  SysUtils;
+  SysUtils,
+  Windows;
 
 { TSQLWebBrokerServer }
 
@@ -73,8 +74,14 @@ begin
     raise EHttpServerException.CreateUTF8('%.EnumWebDispatchers/VerifyURI( % ): %', [Self, AURI, ErrMsg]);
 
   if fHttpServerKind in [useHttpApi, useHttpApiRegisteringURI] then
-    HttpApiAddUri(AURI, fDomainName, fDBServers[0].Security,
-      fHttpServerKind = useHttpApiRegisteringURI, True);
+    try
+      HttpApiAddUri(AURI, fDomainName, fDBServers[0].Security,
+        fHttpServerKind = useHttpApiRegisteringURI, True);
+    except
+      on E: EHttpServerException do
+        if (Pos(Format('#%u', [ERROR_ALREADY_EXISTS]), E.Message) = 0) then
+          raise;
+    end;
 end;
 
 procedure TSQLWebBrokerServer.AuthorizeWebModules;
