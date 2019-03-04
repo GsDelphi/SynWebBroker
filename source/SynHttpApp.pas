@@ -717,9 +717,15 @@ begin
 end;
 
 destructor TSynWebResponse.Destroy;
+var
+  I: Integer;
 begin
   if not Sent then
     SendResponse;
+
+  // Avoid memory leaks
+  for I := Low(FStringVariables) to High(FStringVariables) do
+    FStringVariables[I] := '';
 
   inherited;
 end;
