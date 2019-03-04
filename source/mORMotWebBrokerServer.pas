@@ -103,7 +103,7 @@ begin
       Result := inherited Request(Ctxt);
 
       // In case of error try to handle the request by the SynWebRequestHandler
-      if (Result = HTTP_NOTFOUND) then
+      if (Result = HTTP_BADREQUEST) or (Result = HTTP_NOTFOUND) then
         Result := TSynWebRequestHandler(SynWebRequestHandler).Request(Ctxt);
     finally
       if (Result = HTTP_NONE) or (ErrorMsg <> '') then
