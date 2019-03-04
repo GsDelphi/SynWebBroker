@@ -1,10 +1,11 @@
 # SynWebBroker
 
-SynWebBroker integrates Delphi's WebBroker technologies into [Synopse mORMot]
-(synopse/mORMot) framework. Primary developped to use web- / soap-modules
-within mORMot, it's also possible now to create HTTP API based webservices
-using the fast http.sys on Windows plattforms instead of the existing webserver
-interfaces namely CGI or ISAPI or of course the Indy WebBroker Bridge.
+SynWebBroker integrates Delphi's WebBroker technologies into 
+[Synopse mORMot](https://github.com/synopse/mORMot) framework. Primary
+developped to use web- / soap-modules within mORMot, it's also possible now to
+create HTTP API based webservices using the fast http.sys on Windows plattforms
+instead of the existing webserver interfaces namely CGI or ISAPI or of course
+the Indy WebBroker Bridge.
 
 To enable WebBroker support in your mORMot based applications simply use an
 instance of the `TSQLWebBrokerServer` class instead of `TSQLHttpServer`.
