@@ -100,6 +100,9 @@ procedure TSynWebRequestHandler.AuthorizeURIs(ACallback: TSynAuthorizeUriCallbac
 
     procedure AuthorizeURI(const AURI: string);
     begin
+      if (AURI[Length(AURI)] <> '/') then
+        Exit;
+
       if Assigned(ACallback) then
         ACallback(StringToUTF8(AURI));
     end;
