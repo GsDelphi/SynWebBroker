@@ -23,20 +23,30 @@ interface
 
 uses
   Classes,
-  mORMotWebBrokerServer,
-  SvcMgr;
+  SvcMgr,
+  SysUtils;
 
 type
-  { TODO : register at IDE to get access to published properties}
+  ESQLWebBrokerServiceError = class(Exception);
+
   TSQLWebBrokerService = class(TService)
   private
-    FServer:              TSQLWebBrokerServer;
+    FServer:              TObject;
     FOwnsServer:          Boolean;
     FCreateServerOnStart: Boolean;
     procedure CreateServer;
     procedure DestroyServer;
-    procedure SetServer(const Value: TSQLWebBrokerServer);
+    procedure SetServer(const Value: TObject);
+    function GetServerActive: Boolean;
+    procedure SetServerActive(const Value: Boolean);
   protected
+    /// override this function and create the desired class instance, must be
+    // a descendant of TSQLWebBrokerServer:
+    // ! function TYourService.CreateServerInstance: TSQLWebBrokerServer;
+    // ! begin
+    // !   Result := TSQLWebBrokerServer.Create(...);
+    // ! end;
+    function CreateServerInstance: TObject; virtual; abstract;
     procedure DoStart; override;
     function DoStop: Boolean; override;
     function DoPause: Boolean; override;
@@ -44,11 +54,31 @@ type
     //procedure DoInterrogate; override;
     procedure DoShutdown; override;
     //function DoCustomControl(CtrlCode: DWord): Boolean; override;
+    function IsTSQLWebBrokerServer(AClass: TClass): Boolean;
   public
     constructor CreateNew(AOwner: TComponent; Dummy: Integer = 0); override;
     destructor Destroy; override;
     procedure AfterConstruction; override;
-    property Server: TSQLWebBrokerServer read FServer write SetServer;
+    /// the associated running TSQLWebBrokerServer instance
+    // - because it is not possible to include mORMot to a package we must point
+    // here to a simple TObject class. You can override this property with the
+    // TSQLWebBrokerServer class type in your descedant class to have normal
+    // access to the TSQLWebBrokerServer class properties:
+    // ! property Server: TSQLWebBrokerServer read GetServer write SetServer;
+    // ! ...
+    // ! function TYourService.GetServer: TSQLWebBrokerServer;
+    // ! begin
+    // !   Result := TSQLWebBrokerServer(inherited Server);
+    // ! end;
+    // !
+    // ! procedure TYourService.SetServer(const Value: TSQLWebBrokerServer);
+    // ! begin
+    // !   inherited Server := Value;
+    // ! end;
+    // or by an implicit conversion on each access:
+    // ! TSQLWebBrokerServer(FSQLWebBrokerService.Server).Active := True;
+    property Server: TObject read FServer write SetServer;
+    property ServerActive: Boolean read GetServerActive write SetServerActive;
   published
     property CreateServerOnStart: Boolean read FCreateServerOnStart write FCreateServerOnStart;
   end;
@@ -56,10 +86,13 @@ type
 implementation
 
 uses
-  mORMot,
-  SynHttpApp,
-  SynWebReq,
-  SysUtils;
+  TypInfo;
+
+const
+  SERVER_CLASS_NAME = 'TSQLWebBrokerServer';
+
+resourcestring
+  SErrorInvalidAncestor = '''%s'' is not a descendant of ''%s.''.';
 
 { TSQLWebBrokerService }
 
@@ -79,12 +112,22 @@ begin
 end;
 
 procedure TSQLWebBrokerService.CreateServer;
+var
+  AServer: TObject;
 begin
   if not Assigned(FServer) then
   begin
-    FServer        := TSQLWebBrokerServer.Create();
-    FServer.Active := False;
-    FOwnsServer    := True;
+    FServer := CreateServerInstance;
+
+    if Assigned(FServer) and not IsTSQLWebBrokerServer(FServer.ClassType) then
+    begin
+      AServer := FServer;
+      FServer := nil;
+      raise ESQLWebBrokerServiceError.CreateResFmt(@SErrorInvalidAncestor, [AServer.ClassName, SERVER_CLASS_NAME]);
+    end;
+
+    ServerActive := False;
+    FOwnsServer  := True;
   end;
 end;
 
@@ -105,21 +148,21 @@ end;
 
 function TSQLWebBrokerService.DoContinue: Boolean;
 begin
-  FServer.Active := True;
+  ServerActive := True;
 
-  Result := inherited DoContinue;
+  Result := ServerActive and inherited DoContinue;
 end;
 
 function TSQLWebBrokerService.DoPause: Boolean;
 begin
-  FServer.Active := False;
+  ServerActive := False;
 
-  Result := inherited DoPause;
+  Result := not ServerActive and inherited DoPause;
 end;
 
 procedure TSQLWebBrokerService.DoShutdown;
 begin
-  FServer.Active := False;
+  ServerActive := False;
 
   inherited;
 end;
@@ -130,22 +173,55 @@ begin
 
   CreateServer;
 
-  FServer.Active := True;
+  ServerActive := True;
 end;
 
 function TSQLWebBrokerService.DoStop: Boolean;
 begin
-  FServer.Active := False;
+  ServerActive := False;
 
-  Result := inherited DoStop;
+  Result := not ServerActive and inherited DoStop;
 end;
 
-procedure TSQLWebBrokerService.SetServer(const Value: TSQLWebBrokerServer);
+function TSQLWebBrokerService.GetServerActive: Boolean;
 begin
+  if Assigned(FServer) then
+    Result := Boolean(GetOrdProp(FServer, 'Active'))
+  else
+    Result := False;
+end;
+
+function TSQLWebBrokerService.IsTSQLWebBrokerServer(AClass: TClass): Boolean;
+begin
+  repeat
+    if AClass.ClassNameIs(SERVER_CLASS_NAME) then
+    begin
+      Result := True;
+      Exit;
+    end;
+
+    AClass := AClass.ClassParent;
+  until (AClass = nil);
+
+  Result := False;
+end;
+
+procedure TSQLWebBrokerService.SetServer(const Value: TObject);
+begin
+  if Assigned(FServer) and not IsTSQLWebBrokerServer(Value.ClassType) then
+    raise ESQLWebBrokerServiceError.CreateResFmt(@SErrorInvalidAncestor, [Value.ClassName, SERVER_CLASS_NAME]);
+
   DestroyServer;
 
-  FServer        := Value;
-  FServer.Active := (Status in [csStartPending, csRunning, csContinuePending]);
+  FServer := Value;
+
+  ServerActive := (Status in [csStartPending, csRunning, csContinuePending]);
+end;
+
+procedure TSQLWebBrokerService.SetServerActive(const Value: Boolean);
+begin
+  if Assigned(FServer) and (Value <> ServerActive) then
+    SetOrdProp(FServer, 'Active', Ord(Value));
 end;
 
 end.

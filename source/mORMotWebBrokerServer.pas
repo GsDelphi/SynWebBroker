@@ -27,6 +27,7 @@ uses
   SynCrtSock;
 
 type
+  {$M+}
   TSQLWebBrokerServer = class(TSQLHttpServer)
   private
     FActive: Boolean;
@@ -36,8 +37,13 @@ type
     procedure AuthorizeWebModules; virtual;
   public
     procedure AfterConstruction; override;
-    property Active: Boolean read FActive write FActive;
+  published
+    /// activate / deactivate the server processing
+    // - this property needs to be published to gain access from
+    // TSQLWebBrokerService
+    property Active: Boolean read FActive write FActive stored False;
   end;
+  {$M-}
 
 implementation
 
