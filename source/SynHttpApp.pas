@@ -303,11 +303,8 @@ uses
 
 resourcestring
   // String is external to be protected from code formatting and not messed up
-  SHttpError = '' +
+  SHttpError = {'' +}
   {$I SynHttpAppError.inc};
-
- //  '<html><head></head><body style="font-family:verdana">' +
- //    '<h1>%s Server Error %d</h1><hr><p>HTTP %d %s</p><p>%s</p>' + '<p><small>%s</small></p></body></html>';
 
 function UTF8ToWBString(const AVal: RawUTF8): RawWBString;
 begin
@@ -481,12 +478,10 @@ begin
   FOutCustomHeaders  := FContext.OutCustomHeaders;
   FAuthenticatedUser := FContext.AuthenticatedUser;
 
-  //FQueryFields   := TStringList.Create;
-  //FContentFields := TStringList.Create;
-  //FContext       := AContext;
   FHost := GetHeader('HOST:');
 
   PPos := Pos(':', FHost);
+
   if (PPos > 0) then
     FPort := StrToIntDef(String(Copy(FHost, PPos + 1, MaxInt)), DefaultPort[UseSSL])
   else
@@ -593,6 +588,7 @@ begin
 end;
 
 {$IFDEF RTL310_UP}
+
 function TSynWebRequest.GetRawContent: TBytes;
 begin
   RawByteStringToBytes(Context.InContent, Result);
@@ -601,6 +597,7 @@ end;
 {$ENDIF}
 
 {$IFDEF RTL220_UP}
+
 function TSynWebRequest.GetRawPathInfo: RawWBString;
 begin
   Result := FContext.URL;
@@ -609,6 +606,7 @@ end;
 {$ENDIF}
 
 {$IFDEF RTL220_UP}
+
 function TSynWebRequest.GetRemoteIP: string;
 begin
   {$IFDEF WB_ANSI}
@@ -694,6 +692,7 @@ begin
 end;
 
 {$IFDEF RTL140_UP_OR_CLR}
+
 function TSynWebRequest.WriteHeaders(StatusCode: Integer; const ReasonString, Headers: RawWBString): Boolean;
 begin
   Context.FOutCustomHeaders := Headers;
@@ -837,10 +836,8 @@ begin
   if LastModified > 0 then
     AddHeaderItem(Format(FormatDateTime(sDateFormat + ' "GMT"', LastModified),
       [DayOfWeekStr(LastModified),                   {do not localize}
-      MonthStr(LastModified)]), 'Last-Modified: %s'#13#10);
-  {do not localize}
-  AddHeaderItem(Title, 'Title: %s'#13#10);
-  {do not localize }
+      MonthStr(LastModified)]), 'Last-Modified: %s'#13#10);                     {do not localize}
+  AddHeaderItem(Title, 'Title: %s'#13#10);                                      {do not localize }
   AddHeaderItem(FormatAuthenticate, 'WWW-Authenticate: %s'#13#10);
   {do not localize }
   AddCustomHeaders(Headers);
@@ -858,10 +855,9 @@ begin
   HTTPRequest.WriteHeaders(StatusCode, '', RawWBString(Headers));
 
   // Assign the content
-  if ContentStream = nil then
+  if (ContentStream = nil) then
     HTTPRequest.WriteString(RawContent)
-  else
-  if ContentStream <> nil then
+  else if (ContentStream <> nil) then
   begin
     SendStream(ContentStream);
     ContentStream := nil; // Drop the stream
@@ -876,11 +872,14 @@ end;
 procedure TSynWebResponse.SendStream(AStream: TStream);
 var
   Buffer: SockString;
+  Size:   Int64;
 begin
-  if (AStream.Size > 0) then
+  Size := AStream.Size;
+
+  if (AStream.Position < Size) then
   begin
-    SetLength(Buffer, AStream.Size);
-    SetLength(Buffer, AStream.Read(Buffer[1], AStream.Size));
+    SetLength(Buffer, Size);
+    SetLength(Buffer, AStream.Read(Pointer(Buffer)^, Size));
     HTTPRequest.WriteString(Buffer);
   end;
 end;
@@ -893,7 +892,7 @@ end;
 procedure TSynWebResponse.SetContent(const Value: RawWBString);
 begin
   FContent := Value;
-  if ContentStream = nil then
+  if (ContentStream = nil) then
     ContentLength := Length(FContent);
 end;
 
