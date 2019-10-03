@@ -80,7 +80,7 @@ type
     property Server: TObject read FServer write SetServer;
     property ServerActive: Boolean read GetServerActive write SetServerActive;
   published
-    property CreateServerOnStart: Boolean read FCreateServerOnStart write FCreateServerOnStart;
+    property CreateServerOnStart: Boolean read FCreateServerOnStart write FCreateServerOnStart default True;
   end;
 
 implementation
