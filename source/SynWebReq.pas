@@ -99,12 +99,19 @@ procedure TSynWebRequestHandler.AuthorizeURIs(ACallback: TSynAuthorizeUriCallbac
   procedure ProcessWebDispatcher(AWebDispatcher: TCustomWebDispatcher);
 
     procedure AuthorizeURI(const AURI: string);
+    var
+      FinalURI: string;
     begin
-      if (AURI[Length(AURI)] <> '/') then
+      if (AURI = '') then
+        FinalURI := '/'
+      else
+        FinalURI := AURI;
+
+      if (FinalURI[Length(FinalURI)] <> '/') then
         Exit;
 
       if Assigned(ACallback) then
-        ACallback(StringToUTF8(AURI));
+        ACallback(StringToUTF8(FinalURI));
     end;
 
     procedure ProcessWebDispatchProperties(AComponent: TComponent);
